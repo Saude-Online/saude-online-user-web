@@ -1,6 +1,23 @@
 import { api } from '@/lib/axios'
 
-import { GetPatientsResponse } from './get-patients'
+export interface GetPatientsResponse {
+  patients: {
+    id: string
+    name: string
+    age: number
+    document: string
+    phone: string
+    createdAt: Date
+    updatedAt: Date
+  }[]
+}
+
+export interface GetSpecialtiesResponse {
+  specialties: {
+    id: string
+    name: string
+  }[]
+}
 
 export interface GetUserResponse {
   user: {
@@ -11,6 +28,7 @@ export interface GetUserResponse {
     createdAt: Date
     updatedAt: Date
     patient: GetPatientsResponse
+    specialist: GetSpecialtiesResponse
   }
 }
 

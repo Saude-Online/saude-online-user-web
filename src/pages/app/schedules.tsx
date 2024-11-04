@@ -5,7 +5,7 @@ import { NewSchedule } from '@/components/new-schedule'
 export function Schedules() {
   return (
     <div>
-      <Helmet title="Painel" />
+      <Helmet title="Inicio" />
 
       <div className="flex justify-center p-8">
         <NewSchedule />

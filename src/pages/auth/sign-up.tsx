@@ -40,6 +40,8 @@ const signUpForm = z.object({
     .optional()
     .refine(
       (phone) => {
+        if (!phone) return true
+
         const cleanedPhone = phone?.replace(/\D/g, '')
 
         return cleanedPhone?.length === 11
