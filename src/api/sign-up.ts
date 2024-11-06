@@ -25,6 +25,6 @@ export async function signUp({
     age: null,
     document,
     phone,
-    userId: data,
+    userId: data.userId,
   })
 }
