@@ -15,8 +15,8 @@ export function Home() {
         <div className="grid grid-cols-1 gap-6 py-6 sm:grid-cols-2 lg:px-20">
           <FeatureCard
             icon={CalendarHeart}
-            title="Agenda"
-            description="Organize e acompanhe seus compromissos diários de forma eficiente."
+            title="Agendamento"
+            description="Agende consulta, exames e procedimentos com facilidade."
             to="schedule"
           />
           <FeatureCard
