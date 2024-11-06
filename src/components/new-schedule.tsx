@@ -111,6 +111,7 @@ export function NewSchedule() {
 
       setDate(undefined)
       setHour(null)
+      setSpecialist(user?.crm ? user : null)
 
       toast({
         variant: 'default',
@@ -140,7 +141,8 @@ export function NewSchedule() {
         date && hour ? `${format(date, 'yyyy-MM-dd')}T${hour}:00` : ''
 
       await registerScheduleFn({
-        patient: user?.patient as PatientProps,
+        specialistId: specialist?.id ?? '',
+        patientId: user?.patient.id ?? '',
         dateHour,
       })
     } catch (error) {
