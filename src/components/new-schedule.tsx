@@ -5,14 +5,13 @@ import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
   Check,
-  ChevronsUpDown,
   Clock,
   Stethoscope,
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { getSpecialists } from '@/api/get-specialists'
-import { getUser } from '@/api/get-user'
+import { getUser, type PatientProps } from '@/api/get-user'
+import { getUsers } from '@/api/get-users'
 import { registerSchedule } from '@/api/register-schedule'
 import { TimeSlots } from '@/components/times-slots'
 import {
@@ -34,18 +33,29 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Separator } from '@/components/ui/separator'
 import { ToastAction } from '@/components/ui/toast'
 import { toast } from '@/components/ui/use-toast'
 import { queryClient } from '@/lib/react-query'
 import { cn } from '@/lib/utils'
 import { axiosErrorHandler } from '@/utils/axiosErrorHandler'
+
+export interface DoctorProps {
+  id: string
+  name: string
+  username: string
+  crm: string
+  role: string
+  patient: PatientProps
+  createdAt: Date
+  updatedAt: Date
+}
 
 const times = [
   {
@@ -96,13 +106,13 @@ export function NewSchedule() {
     staleTime: Infinity,
   })
 
-  const { data: specialties } = useQuery({
-    queryKey: ['specialties'],
-    queryFn: getSpecialists,
+  const { data: users } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => getUsers({ isDoctor: true }),
     staleTime: Infinity,
   })
 
-  console.log(specialties)
+  const doctors = Array.isArray(users) ? users : []
 
   const { mutateAsync: registerScheduleFn } = useMutation({
     mutationFn: registerSchedule,
@@ -112,7 +122,7 @@ export function NewSchedule() {
       toast({
         variant: 'default',
         title: 'Agendamento',
-        description: 'Agendamento realizado!',
+        description: 'Agendado realizado!',
         action: (
           <ToastAction altText="Fazer login">
             Adicionar ao calendário
@@ -123,9 +133,11 @@ export function NewSchedule() {
     },
   })
 
+  const [specialist, setSpecialist] = useState<DoctorProps | null>(
+    user?.crm ? user : null,
+  )
   const [date, setDate] = useState<Date>()
   const [hour, setHour] = useState<string | null>(null)
-  const [specialist, setSpecialist] = useState<any>()
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const dateHour =
@@ -137,16 +149,16 @@ export function NewSchedule() {
         return toast({
           variant: 'destructive',
           title: 'Agendamento',
-          description: 'Informe a data e a hora da consulta para agendar.',
+          description: 'Preencha todos os campos para agendar.',
         })
       }
 
       await registerScheduleFn({
-        patient: user?.patient,
+        specialistId: specialist?.id ?? '',
+        patientId: user?.patient.id ?? '',
         dateHour,
       })
     } catch (error) {
-      console.error(error)
       const errorMessage = axiosErrorHandler(error)
       toast({
         variant: 'destructive',
@@ -174,6 +186,7 @@ export function NewSchedule() {
 
     setDate(undefined)
     setHour(null)
+    setSpecialist(user?.crm ? user : null)
   }
 
   return (
@@ -214,71 +227,71 @@ export function NewSchedule() {
             <Clock className="h-6 w-6 text-primary" />
 
             <h1 className="text-2xl font-semibold tracking-tight">
-              Realizar agendamento
+              Novo agendamento
             </h1>
           </div>
-          <div className="py-4">
-            <Label className="text-lg">{user?.name},</Label>
-            <p className="text-sm text-muted-foreground">
-              Selecione o especialista desejado, data e horário para criar o
-              agendamento
-            </p>
-          </div>
+          <p className="pb-2 text-sm text-muted-foreground">
+            Selecione data, horário e informe o nome do paciente para criar o
+            agendamento
+          </p>
 
           <div className="flex flex-col space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label>Paciente</Label>
+              <Input disabled value={user?.name} />
+            </div>
+
             <Popover>
               <PopoverTrigger asChild>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="schedule date">Especialista</Label>
+                  <Label htmlFor="patient name">Médico</Label>
                   <Button
-                    variant="outline"
                     size="lg"
-                    className="w-full justify-between text-left font-normal"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
                   >
-                    <div className="flex flex-row items-center">
-                      <Stethoscope className="mr-4 h-4 w-4 text-primary" />
-                      {specialist && specialties ? (
-                        specialties.find(
-                          (specialty) => specialty.value === specialist,
-                        )?.label
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Selecione um especialista
-                        </span>
-                      )}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Stethoscope className="mr-2 h-4 w-4 text-primary" />
+                    {specialist ? (
+                      doctors?.find((p) => p.name === specialist.name)?.name
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Selecione o médico
+                      </span>
+                    )}
                   </Button>
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0">
+              <PopoverContent className="w-auto p-2">
                 <Command>
-                  <CommandInput placeholder="Pesquisar..." />
+                  <CommandInput placeholder="Pesquise aqui..." />
+
                   <CommandList>
-                    <CommandEmpty>Nenhum especialista.</CommandEmpty>
+                    <CommandEmpty>Nenhum médico encontrado</CommandEmpty>
                     <CommandGroup>
-                      {specialties &&
-                        specialties.map((specialty) => (
-                          <CommandItem
-                            key={specialty.value}
-                            value={specialty.value}
-                            onSelect={(currentValue) => {
-                              setSpecialist(
-                                currentValue === specialist ? '' : currentValue,
-                              )
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                specialist === specialty.value
-                                  ? 'opacity-100'
-                                  : 'opacity-0',
-                              )}
-                            />
-                            {specialty.label}
-                          </CommandItem>
-                        ))}
+                      {doctors.map((u) => (
+                        <CommandItem
+                          key={u.id}
+                          value={u.name}
+                          onSelect={(currentValue) => {
+                            const selectedUser = doctors.find(
+                              (doc) => doc.name === currentValue,
+                            )
+                            if (selectedUser) {
+                              setSpecialist(selectedUser)
+                            }
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              u.name === specialist?.name
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                          {u.name}
+                        </CommandItem>
+                      ))}
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -288,13 +301,13 @@ export function NewSchedule() {
             <Popover>
               <PopoverTrigger asChild>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="schedule date">Data</Label>
+                  <Label>Data</Label>
                   <Button
                     variant="outline"
                     size="lg"
                     className="w-full justify-start text-left font-normal"
                   >
-                    <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
                     {date ? (
                       format(date, 'PPP', { locale: ptBR })
                     ) : (
@@ -319,19 +332,15 @@ export function NewSchedule() {
               </PopoverContent>
             </Popover>
 
-            <div className="flex flex-col py-4">
-              <Separator />
+            <div className="flex flex-col gap-2 pb-4">
+              <Label className="text-lg">Horários</Label>
 
-              <div className="pt-4">
-                <Label className="text-lg">Horários disponíveis</Label>
-
-                <TimeSlots
-                  label="Selecione o médico e a data para visualizar os horários disponíveis"
-                  date={date ? format(date, 'yyyy-MM-dd') : ''}
-                  times={times}
-                  onSelect={setHour}
-                />
-              </div>
+              <TimeSlots
+                label="Selecione o horário da consulta"
+                date={date ? format(date, 'yyyy-MM-dd') : ''}
+                times={times}
+                onSelect={setHour}
+              />
             </div>
 
             <Button
