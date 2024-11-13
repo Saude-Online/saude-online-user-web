@@ -17,10 +17,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-import {
-  getSpecialties,
-  type GetSpecialtiesResponse,
-} from '@/api/get-specialties'
+import { getSpecialties } from '@/api/get-specialties'
 import { getUser, type PatientProps } from '@/api/get-user'
 import { getUsers } from '@/api/get-users'
 import { registerSchedule } from '@/api/register-schedule'
@@ -116,11 +113,13 @@ export function NewSchedule() {
     staleTime: Infinity,
   })
 
-  const { data: specialties } = useQuery({
-    queryKey: ['specialties'],
-    queryFn: getSpecialties,
-    staleTime: Infinity,
-  })
+  const { data: specialties = [] as { id: string; name: string }[] } = useQuery(
+    {
+      queryKey: ['specialties'],
+      queryFn: getSpecialties,
+      staleTime: Infinity,
+    },
+  )
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -147,7 +146,10 @@ export function NewSchedule() {
     },
   })
 
-  const [specialty, setSpecialty] = useState<GetSpecialtiesResponse | null>()
+  const [specialty, setSpecialty] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const [specialist, setSpecialist] = useState<DoctorProps | null>(
     user?.crm ? user : null,
   )
@@ -156,14 +158,14 @@ export function NewSchedule() {
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const filteredDoctors = specialty
-    ? users?.filter((doctor) =>
-        doctor.specialties.some(
-          (docSpecialty: { id: string }) => docSpecialty.id === specialty.id,
-        ),
+    ? users?.filter(
+        (doctor) =>
+          Array.isArray(doctor.specialties) &&
+          doctor.specialties.some(
+            (docSpecialty: { id: string }) => docSpecialty.id === specialty.id,
+          ),
       )
     : users
-
-  console.log(users)
 
   const dateHour =
     date && hour ? `${format(date, 'yyyy-MM-dd')}T${hour}:00` : ''
@@ -293,14 +295,15 @@ export function NewSchedule() {
                       Nenhuma especialidade encontrada
                     </CommandEmpty>
                     <CommandGroup>
-                      {specialties?.map((spec) => (
-                        <CommandItem
-                          key={spec.id}
-                          onSelect={() => setSpecialty(spec)}
-                        >
-                          {spec.name}
-                        </CommandItem>
-                      ))}
+                      {Array.isArray(specialties) &&
+                        specialties.map((spec) => (
+                          <CommandItem
+                            key={spec.id}
+                            onSelect={() => setSpecialty(spec)}
+                          >
+                            {spec.name}
+                          </CommandItem>
+                        ))}
                     </CommandGroup>
                   </CommandList>
                 </Command>
