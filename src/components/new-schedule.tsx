@@ -1,15 +1,26 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { CalendarEvent, google, office365, outlook, yahoo } from 'calendar-link'
+import {
+  type CalendarEvent,
+  google,
+  office365,
+  outlook,
+  yahoo,
+} from 'calendar-link'
 import { format, isBefore, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
   Check,
   Clock,
+  Heart,
   Stethoscope,
 } from 'lucide-react'
 import { useState } from 'react'
 
+import {
+  getSpecialties,
+  type GetSpecialtiesResponse,
+} from '@/api/get-specialties'
 import { getUser, type PatientProps } from '@/api/get-user'
 import { getUsers } from '@/api/get-users'
 import { registerSchedule } from '@/api/register-schedule'
@@ -43,7 +54,6 @@ import {
 import { ToastAction } from '@/components/ui/toast'
 import { toast } from '@/components/ui/use-toast'
 import { queryClient } from '@/lib/react-query'
-import { cn } from '@/lib/utils'
 import { axiosErrorHandler } from '@/utils/axiosErrorHandler'
 
 export interface DoctorProps {
@@ -106,13 +116,17 @@ export function NewSchedule() {
     staleTime: Infinity,
   })
 
+  const { data: specialties } = useQuery({
+    queryKey: ['specialties'],
+    queryFn: getSpecialties,
+    staleTime: Infinity,
+  })
+
   const { data: users } = useQuery({
     queryKey: ['users'],
     queryFn: () => getUsers({ isDoctor: true }),
     staleTime: Infinity,
   })
-
-  const doctors = Array.isArray(users) ? users : []
 
   const { mutateAsync: registerScheduleFn } = useMutation({
     mutationFn: registerSchedule,
@@ -133,6 +147,7 @@ export function NewSchedule() {
     },
   })
 
+  const [specialty, setSpecialty] = useState<GetSpecialtiesResponse | null>()
   const [specialist, setSpecialist] = useState<DoctorProps | null>(
     user?.crm ? user : null,
   )
@@ -140,12 +155,22 @@ export function NewSchedule() {
   const [hour, setHour] = useState<string | null>(null)
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
+  const filteredDoctors = specialty
+    ? users?.filter((doctor) =>
+        doctor.specialties.some(
+          (docSpecialty: { id: string }) => docSpecialty.id === specialty.id,
+        ),
+      )
+    : users
+
+  console.log(users)
+
   const dateHour =
     date && hour ? `${format(date, 'yyyy-MM-dd')}T${hour}:00` : ''
 
   async function handleCreateNewSchedule() {
     try {
-      if (!date || !hour) {
+      if (!specialist || !date || !hour) {
         return toast({
           variant: 'destructive',
           title: 'Agendamento',
@@ -231,8 +256,7 @@ export function NewSchedule() {
             </h1>
           </div>
           <p className="pb-2 text-sm text-muted-foreground">
-            Selecione data, horário e informe o nome do paciente para criar o
-            agendamento
+            Selecione um médico, data e horário para agendar uma consulta.
           </p>
 
           <div className="flex flex-col space-y-4">
@@ -244,15 +268,57 @@ export function NewSchedule() {
             <Popover>
               <PopoverTrigger asChild>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="patient name">Médico</Label>
+                  <Label>Especialidade</Label>
                   <Button
                     size="lg"
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
                   >
-                    <Stethoscope className="mr-2 h-4 w-4 text-primary" />
+                    <Heart className="mr-4 h-4 w-4 text-primary" />
+                    {specialty ? (
+                      specialty.name
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Selecione a especialidade
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2">
+                <Command>
+                  <CommandInput placeholder="Pesquise especialidades..." />
+                  <CommandList>
+                    <CommandEmpty>
+                      Nenhuma especialidade encontrada
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {specialties?.map((spec) => (
+                        <CommandItem
+                          key={spec.id}
+                          onSelect={() => setSpecialty(spec)}
+                        >
+                          {spec.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="flex flex-col gap-2">
+                  <Label>Médico</Label>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <Stethoscope className="mr-4 h-4 w-4 text-primary" />
                     {specialist ? (
-                      doctors?.find((p) => p.name === specialist.name)?.name
+                      specialist.name
                     ) : (
                       <span className="text-muted-foreground">
                         Selecione o médico
@@ -263,33 +329,16 @@ export function NewSchedule() {
               </PopoverTrigger>
               <PopoverContent className="w-auto p-2">
                 <Command>
-                  <CommandInput placeholder="Pesquise aqui..." />
-
+                  <CommandInput placeholder="Pesquise médicos..." />
                   <CommandList>
                     <CommandEmpty>Nenhum médico encontrado</CommandEmpty>
                     <CommandGroup>
-                      {doctors.map((u) => (
+                      {filteredDoctors?.map((doc) => (
                         <CommandItem
-                          key={u.id}
-                          value={u.name}
-                          onSelect={(currentValue) => {
-                            const selectedUser = doctors.find(
-                              (doc) => doc.name === currentValue,
-                            )
-                            if (selectedUser) {
-                              setSpecialist(selectedUser)
-                            }
-                          }}
+                          key={doc.id}
+                          onSelect={() => setSpecialist(doc)}
                         >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              u.name === specialist?.name
-                                ? 'opacity-100'
-                                : 'opacity-0',
-                            )}
-                          />
-                          {u.name}
+                          {doc.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -307,7 +356,7 @@ export function NewSchedule() {
                     size="lg"
                     className="w-full justify-start text-left font-normal"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
                     {date ? (
                       format(date, 'PPP', { locale: ptBR })
                     ) : (

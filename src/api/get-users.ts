@@ -1,6 +1,6 @@
+import type { GetSpecialtiesResponse } from '@/api/get-specialties'
+import type { PatientProps } from '@/api/get-user'
 import { api } from '@/lib/axios'
-
-import type { PatientProps } from './get-user'
 
 export interface GetUsersResponse {
   users: {
@@ -10,6 +10,7 @@ export interface GetUsersResponse {
     crm: string
     role: string
     patient: PatientProps
+    specialties: GetSpecialtiesResponse
     createdAt: Date
     updatedAt: Date
   }[]

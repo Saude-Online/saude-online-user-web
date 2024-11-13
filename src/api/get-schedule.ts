@@ -20,7 +20,7 @@ export interface GetScheduleResponse {
 }
 
 export async function getSchedule() {
-  const response = await api.get<GetScheduleResponse>(`/schedules`)
+  const response = await api.get<GetScheduleResponse>('/schedules')
 
   return response.data.schedules
 }
