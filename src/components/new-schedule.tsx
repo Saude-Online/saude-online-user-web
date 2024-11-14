@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
   Check,
+  ClipboardPlus,
   Clock,
   Heart,
   Stethoscope,
@@ -34,6 +35,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -48,6 +57,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToastAction } from '@/components/ui/toast'
 import { toast } from '@/components/ui/use-toast'
 import { queryClient } from '@/lib/react-query'
@@ -217,196 +227,386 @@ export function NewSchedule() {
   }
 
   return (
-    <div className="flex items-center">
-      <AlertDialog open={isOpenAlertDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Adicionar ao calendário pessoal</AlertDialogTitle>
-            <AlertDialogDescription>
-              Escolha o calendário que deseja adicionar o agendamento
-            </AlertDialogDescription>
-            <div className="flex items-center justify-center gap-2 pt-4">
-              <Button size="sm" onClick={() => handleOpenCalendar(googleUrl)}>
-                Google Calendar
-              </Button>
-              <Button size="sm" onClick={() => handleOpenCalendar(outlookUrl)}>
-                Outlook
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleOpenCalendar(office365Url)}
-              >
-                Office 365
-              </Button>
-              <Button size="sm" onClick={() => handleOpenCalendar(yahooUrl)}>
-                Yahoo Calendar
-              </Button>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <div className="flex-col justify-between rounded-lg p-10 md:flex">
-        <div className="space-y-4">
-          <div className="flex flex-row items-center gap-3">
-            <Clock className="h-6 w-6 text-primary" />
-
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Novo agendamento
-            </h1>
-          </div>
-          <p className="pb-2 text-sm text-muted-foreground">
-            Selecione um médico, data e horário para agendar uma consulta.
-          </p>
-
-          <div className="flex flex-col space-y-4">
-            <div className="flex flex-col gap-2">
-              <Label>Paciente</Label>
-              <Input disabled value={user?.name} />
-            </div>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Especialidade</Label>
+    <Tabs defaultValue="consulta" className="max-w-[800px]">
+      <TabsList>
+        <TabsTrigger value="consulta">Consulta</TabsTrigger>
+        <TabsTrigger value="exame">Exame</TabsTrigger>
+      </TabsList>
+      <TabsContent value="consulta">
+        <div className="flex-1">
+          <AlertDialog open={isOpenAlertDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Adicionar ao calendário pessoal
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Escolha o calendário que deseja adicionar o agendamento
+                </AlertDialogDescription>
+                <div className="flex items-center justify-center gap-2 pt-4">
                   <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
+                    size="sm"
+                    onClick={() => handleOpenCalendar(googleUrl)}
                   >
-                    <Heart className="mr-4 h-4 w-4 text-primary" />
-                    {specialty ? (
-                      specialty.name
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione a especialidade
-                      </span>
-                    )}
+                    Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(outlookUrl)}
+                  >
+                    Outlook
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(office365Url)}
+                  >
+                    Office 365
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(yahooUrl)}
+                  >
+                    Yahoo Calendar
                   </Button>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Command>
-                  <CommandInput placeholder="Pesquise especialidades..." />
-                  <CommandList>
-                    <CommandEmpty>
-                      Nenhuma especialidade encontrada
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {Array.isArray(specialties) &&
-                        specialties.map((spec) => (
-                          <CommandItem
-                            key={spec.id}
-                            onSelect={() => setSpecialty(spec)}
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-row gap-3">
+                <Clock className="h-6 w-6 text-primary" />
+                Agendamento de consulta
+              </CardTitle>
+              <CardDescription>
+                Selecione um médico, data e horário para agendar uma consulta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex-col justify-between rounded-lg md:flex">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Paciente</Label>
+                      <Input disabled value={user?.name} />
+                    </div>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Especialidade</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
                           >
-                            {spec.name}
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+                            <Heart className="mr-4 h-4 w-4 text-primary" />
+                            {specialty ? (
+                              specialty.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a especialidade
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise especialidades..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              Nenhuma especialidade encontrada
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {Array.isArray(specialties) &&
+                                specialties.map((spec) => (
+                                  <CommandItem
+                                    key={spec.id}
+                                    onSelect={() => setSpecialty(spec)}
+                                  >
+                                    {spec.name}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Médico</Label>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <Stethoscope className="mr-4 h-4 w-4 text-primary" />
-                    {specialist ? (
-                      specialist.name
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione o médico
-                      </span>
-                    )}
-                  </Button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Médico</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Stethoscope className="mr-4 h-4 w-4 text-primary" />
+                            {specialist ? (
+                              specialist.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione o médico
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise médicos..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              Nenhum médico encontrado
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {filteredDoctors?.map((doc) => (
+                                <CommandItem
+                                  key={doc.id}
+                                  onSelect={() => setSpecialist(doc)}
+                                >
+                                  {doc.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Data</Label>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
+                            {date ? (
+                              format(date, 'PPP', { locale: ptBR })
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a data
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          modifiers={{
+                            disabled: (date) =>
+                              !isToday(date) && isBefore(date, new Date()),
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex flex-col gap-2 pb-4">
+                      <Label className="text-lg">Horários</Label>
+
+                      <TimeSlots
+                        label="Selecione o horário da consulta"
+                        date={date ? format(date, 'yyyy-MM-dd') : ''}
+                        times={times}
+                        onSelect={setHour}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Command>
-                  <CommandInput placeholder="Pesquise médicos..." />
-                  <CommandList>
-                    <CommandEmpty>Nenhum médico encontrado</CommandEmpty>
-                    <CommandGroup>
-                      {filteredDoctors?.map((doc) => (
-                        <CommandItem
-                          key={doc.id}
-                          onSelect={() => setSpecialist(doc)}
-                        >
-                          {doc.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Data</Label>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
-                    {date ? (
-                      format(date, 'PPP', { locale: ptBR })
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione a data
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                  modifiers={{
-                    disabled: (date) =>
-                      !isToday(date) && isBefore(date, new Date()),
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-
-            <div className="flex flex-col gap-2 pb-4">
-              <Label className="text-lg">Horários</Label>
-
-              <TimeSlots
-                label="Selecione o horário da consulta"
-                date={date ? format(date, 'yyyy-MM-dd') : ''}
-                times={times}
-                onSelect={setHour}
-              />
-            </div>
-
-            <Button
-              size="lg"
-              title="Realizar agendamento"
-              className="w-full gap-2"
-              onClick={handleCreateNewSchedule}
-            >
-              <Check />
-              Agendar
-            </Button>
-          </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                size="lg"
+                title="Realizar agendamento"
+                className="w-full gap-2"
+                onClick={handleCreateNewSchedule}
+              >
+                <Check />
+                Agendar consulta
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value="exame">
+        <div className="flex-1">
+          <AlertDialog open={isOpenAlertDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Adicionar ao calendário pessoal
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Escolha o calendário que deseja adicionar o agendamento
+                </AlertDialogDescription>
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(googleUrl)}
+                  >
+                    Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(outlookUrl)}
+                  >
+                    Outlook
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(office365Url)}
+                  >
+                    Office 365
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(yahooUrl)}
+                  >
+                    Yahoo Calendar
+                  </Button>
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-row gap-3">
+                <ClipboardPlus className="h-6 w-6 text-primary" />
+                Agendamento de exame
+              </CardTitle>
+              <CardDescription>
+                Selecione o exame, data e horário para agendar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex-col justify-between rounded-lg md:flex">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Paciente</Label>
+                      <Input disabled value={user?.name} />
+                    </div>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Exame</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Stethoscope className="mr-4 h-4 w-4 text-primary" />
+                            {specialist ? (
+                              specialist.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione o exame
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise médicos..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              Nenhum médico encontrado
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {filteredDoctors?.map((doc) => (
+                                <CommandItem
+                                  key={doc.id}
+                                  onSelect={() => setSpecialist(doc)}
+                                >
+                                  {doc.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Data</Label>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
+                            {date ? (
+                              format(date, 'PPP', { locale: ptBR })
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a data
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          modifiers={{
+                            disabled: (date) =>
+                              !isToday(date) && isBefore(date, new Date()),
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex flex-col gap-2 pb-4">
+                      <Label className="text-lg">Horários</Label>
+
+                      <TimeSlots
+                        label="Selecione o horário da consulta"
+                        date={date ? format(date, 'yyyy-MM-dd') : ''}
+                        times={times}
+                        onSelect={setHour}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                size="lg"
+                title="Realizar agendamento"
+                className="w-full gap-2"
+                onClick={handleCreateNewSchedule}
+              >
+                <Check />
+                Agendar exame
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }
