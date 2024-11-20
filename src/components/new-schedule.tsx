@@ -77,21 +77,18 @@ export interface DoctorProps {
   updatedAt: Date
 }
 
-interface BaseScheduleBody {
+interface RegisterScheduleBody {
+  specialistId: string
+  specialtyId: string
   patientId: string
   dateHour: string
 }
 
-interface ConsultScheduleBody extends BaseScheduleBody {
-  specialistId: string
-  specialtyId: string
-}
-
-interface ExamScheduleBody extends BaseScheduleBody {
+interface RegisterExamScheduleBody {
   examId: string
+  patientId: string
+  dateHour: string
 }
-
-type RegisterSchedule = ConsultScheduleBody | ExamScheduleBody
 
 const times = [
   {
@@ -221,7 +218,9 @@ export function NewSchedule() {
   )
   const [date, setDate] = useState<Date>()
   const [hour, setHour] = useState<string | null>(null)
-  const [schedule, setSchedule] = useState<RegisterSchedule>()
+  const [schedule, setSchedule] = useState<
+    RegisterScheduleBody | RegisterExamScheduleBody | undefined
+  >(undefined)
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const filteredDoctors = specialty
@@ -240,41 +239,44 @@ export function NewSchedule() {
   function handleCreateSchedule(type: 'consulta' | 'exame') {
     return async () => {
       try {
-        if (type === 'consulta' && (!specialist || !date || !hour)) {
-          return toast({
-            variant: 'destructive',
-            title: 'Agendamento',
-            description: 'Preencha todos os campos para agendar a consulta.',
-          })
+        let scheduleData: RegisterScheduleBody | RegisterExamScheduleBody
+
+        if (type === 'consulta') {
+          if (!specialist || !date || !hour) {
+            return toast({
+              variant: 'destructive',
+              title: 'Agendamento',
+              description: 'Preencha todos os campos para agendar a consulta.',
+            })
+          }
+
+          scheduleData = {
+            specialistId: specialist.id,
+            specialtyId: specialty?.id ?? '',
+            patientId: user?.patient.id ?? '',
+            dateHour,
+          }
+
+          setSchedule(scheduleData)
+
+          await registerScheduleFn(scheduleData as RegisterScheduleBody)
+        } else {
+          if (!exam || !date || !hour) {
+            return toast({
+              variant: 'destructive',
+              title: 'Agendamento',
+              description: 'Preencha todos os campos para agendar o exame.',
+            })
+          }
+
+          scheduleData = {
+            examId: exam.id,
+            patientId: user?.patient.id ?? '',
+            dateHour,
+          }
+
+          await registerExamScheduleFn(scheduleData as RegisterExamScheduleBody)
         }
-
-        if (type === 'exame' && (!exam || !date || !hour)) {
-          return toast({
-            variant: 'destructive',
-            title: 'Agendamento',
-            description: 'Preencha todos os campos para agendar o exame.',
-          })
-        }
-
-        const scheduleData =
-          type === 'consulta'
-            ? {
-                specialistId: specialist?.id ?? '',
-                specialtyId: specialty?.id ?? '',
-                patientId: user?.patient.id ?? '',
-                dateHour,
-              }
-            : {
-                examId: exam?.id ?? '',
-                patientId: user?.patient.id ?? '',
-                dateHour,
-              }
-
-        setSchedule(scheduleData)
-
-        const mutateFn =
-          type === 'consulta' ? registerScheduleFn : registerExamScheduleFn
-        await mutateFn(scheduleData)
       } catch (error) {
         const errorMessage = axiosErrorHandler(error)
         toast({
