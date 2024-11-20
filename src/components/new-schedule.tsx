@@ -14,13 +14,16 @@ import {
   ClipboardPlus,
   Clock,
   Heart,
+  Hospital,
   Stethoscope,
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { getExams } from '@/api/get-exams'
 import { getSpecialties } from '@/api/get-specialties'
 import { getUser, type PatientProps } from '@/api/get-user'
 import { getUsers } from '@/api/get-users'
+import { registerExamSchedule } from '@/api/register-exam-schedule'
 import { registerSchedule } from '@/api/register-schedule'
 import { TimeSlots } from '@/components/times-slots'
 import {
@@ -74,6 +77,22 @@ export interface DoctorProps {
   updatedAt: Date
 }
 
+interface BaseScheduleBody {
+  patientId: string
+  dateHour: string
+}
+
+interface ConsultScheduleBody extends BaseScheduleBody {
+  specialistId: string
+  specialtyId: string
+}
+
+interface ExamScheduleBody extends BaseScheduleBody {
+  examId: string
+}
+
+type RegisterSchedule = ConsultScheduleBody | ExamScheduleBody
+
 const times = [
   {
     time: '09:00',
@@ -123,13 +142,25 @@ export function NewSchedule() {
     staleTime: Infinity,
   })
 
-  const { data: specialties = [] as { id: string; name: string }[] } = useQuery(
-    {
-      queryKey: ['specialties'],
-      queryFn: getSpecialties,
-      staleTime: Infinity,
-    },
-  )
+  const {
+    data: specialties = [] as {
+      id: string
+      name: string
+      formattedValue: string
+    }[],
+  } = useQuery({
+    queryKey: ['specialties'],
+    queryFn: getSpecialties,
+    staleTime: Infinity,
+  })
+
+  const {
+    data: exams = [] as { id: string; name: string; formattedValue: string }[],
+  } = useQuery({
+    queryKey: ['exams'],
+    queryFn: getExams,
+    staleTime: Infinity,
+  })
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -156,15 +187,41 @@ export function NewSchedule() {
     },
   })
 
+  const { mutateAsync: registerExamScheduleFn } = useMutation({
+    mutationFn: registerExamSchedule,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['exams-schedules'] })
+
+      toast({
+        variant: 'default',
+        title: 'Agendamento',
+        description: 'Agendado realizado!',
+        action: (
+          <ToastAction altText="Fazer login">
+            Adicionar ao calendário
+          </ToastAction>
+        ),
+        onClick: () => setIsOpenAlertDialog(true),
+      })
+    },
+  })
+
   const [specialty, setSpecialty] = useState<{
     id: string
     name: string
+    formattedValue: string
+  } | null>(null)
+  const [exam, setExam] = useState<{
+    id: string
+    name: string
+    formattedValue: string
   } | null>(null)
   const [specialist, setSpecialist] = useState<DoctorProps | null>(
     user?.crm ? user : null,
   )
   const [date, setDate] = useState<Date>()
   const [hour, setHour] = useState<string | null>(null)
+  const [schedule, setSchedule] = useState<RegisterSchedule>()
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const filteredDoctors = specialty
@@ -180,35 +237,68 @@ export function NewSchedule() {
   const dateHour =
     date && hour ? `${format(date, 'yyyy-MM-dd')}T${hour}:00` : ''
 
-  async function handleCreateNewSchedule() {
-    try {
-      if (!specialist || !date || !hour) {
-        return toast({
+  function handleCreateSchedule(type: 'consulta' | 'exame') {
+    return async () => {
+      try {
+        if (type === 'consulta' && (!specialist || !date || !hour)) {
+          return toast({
+            variant: 'destructive',
+            title: 'Agendamento',
+            description: 'Preencha todos os campos para agendar a consulta.',
+          })
+        }
+
+        if (type === 'exame' && (!exam || !date || !hour)) {
+          return toast({
+            variant: 'destructive',
+            title: 'Agendamento',
+            description: 'Preencha todos os campos para agendar o exame.',
+          })
+        }
+
+        const scheduleData =
+          type === 'consulta'
+            ? {
+                specialistId: specialist?.id ?? '',
+                specialtyId: specialty?.id ?? '',
+                patientId: user?.patient.id ?? '',
+                dateHour,
+              }
+            : {
+                examId: exam?.id ?? '',
+                patientId: user?.patient.id ?? '',
+                dateHour,
+              }
+
+        setSchedule(scheduleData)
+
+        const mutateFn =
+          type === 'consulta' ? registerScheduleFn : registerExamScheduleFn
+        await mutateFn(scheduleData)
+      } catch (error) {
+        const errorMessage = axiosErrorHandler(error)
+        toast({
           variant: 'destructive',
           title: 'Agendamento',
-          description: 'Preencha todos os campos para agendar.',
+          description: errorMessage,
         })
+      } finally {
+        setDate(undefined)
+        setHour(null)
+        if (type === 'consulta') {
+          setSpecialty(null)
+          setSpecialist(user?.crm ? user : null)
+        } else {
+          setExam(null)
+        }
       }
-
-      await registerScheduleFn({
-        specialistId: specialist?.id ?? '',
-        patientId: user?.patient.id ?? '',
-        dateHour,
-      })
-    } catch (error) {
-      const errorMessage = axiosErrorHandler(error)
-      toast({
-        variant: 'destructive',
-        title: 'Agendamento',
-        description: errorMessage,
-      })
     }
   }
 
   const event: CalendarEvent = {
     title: 'Consulta médica',
-    description: 'Agendamento de consulta médica - Saúde Online',
-    start: `${dateHour.replace('T', ' ')} +0300`,
+    description: 'Agendamento - Saúde Online',
+    start: `${schedule?.dateHour.replace('T', ' ')} +0300`,
     duration: [30, 'minutes'],
   }
 
@@ -220,10 +310,6 @@ export function NewSchedule() {
   const handleOpenCalendar = (url: string) => {
     window.open(url, '_blank')
     setIsOpenAlertDialog(false)
-
-    setDate(undefined)
-    setHour(null)
-    setSpecialist(user?.crm ? user : null)
   }
 
   return (
@@ -326,9 +412,14 @@ export function NewSchedule() {
                                 specialties.map((spec) => (
                                   <CommandItem
                                     key={spec.id}
+                                    className="flex-row items-center justify-between gap-10"
                                     onSelect={() => setSpecialty(spec)}
                                   >
-                                    {spec.name}
+                                    <p>{spec.name}</p>
+
+                                    <p className="font-semibold">
+                                      {spec.formattedValue}
+                                    </p>
                                   </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -427,15 +518,18 @@ export function NewSchedule() {
                 </div>
               </div>
             </CardContent>
+
             <CardFooter>
               <Button
+                disabled={!specialty?.id || !specialist?.id || !dateHour}
                 size="lg"
                 title="Realizar agendamento"
                 className="w-full gap-2"
-                onClick={handleCreateNewSchedule}
+                onClick={handleCreateSchedule('consulta')}
               >
                 <Check />
-                Agendar consulta
+                Agendar consulta{' '}
+                {specialty && ` - ${specialty?.formattedValue}`}
               </Button>
             </CardFooter>
           </Card>
@@ -512,9 +606,9 @@ export function NewSchedule() {
                             variant="outline"
                             className="w-full justify-start text-left font-normal"
                           >
-                            <Stethoscope className="mr-4 h-4 w-4 text-primary" />
-                            {specialist ? (
-                              specialist.name
+                            <Hospital className="mr-4 h-4 w-4 text-primary" />
+                            {exam ? (
+                              exam.name
                             ) : (
                               <span className="text-muted-foreground">
                                 Selecione o exame
@@ -525,20 +619,24 @@ export function NewSchedule() {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-2">
                         <Command>
-                          <CommandInput placeholder="Pesquise médicos..." />
+                          <CommandInput placeholder="Pesquise exames..." />
                           <CommandList>
-                            <CommandEmpty>
-                              Nenhum médico encontrado
-                            </CommandEmpty>
+                            <CommandEmpty>Nenhum exame encontrado</CommandEmpty>
                             <CommandGroup>
-                              {filteredDoctors?.map((doc) => (
-                                <CommandItem
-                                  key={doc.id}
-                                  onSelect={() => setSpecialist(doc)}
-                                >
-                                  {doc.name}
-                                </CommandItem>
-                              ))}
+                              {Array.isArray(exams) &&
+                                exams.map((exam) => (
+                                  <CommandItem
+                                    key={exam.id}
+                                    className="flex-row items-center justify-between gap-10"
+                                    onSelect={() => setExam(exam)}
+                                  >
+                                    <p>{exam.name}</p>
+
+                                    <p className="font-semibold">
+                                      {exam.formattedValue}
+                                    </p>
+                                  </CommandItem>
+                                ))}
                             </CommandGroup>
                           </CommandList>
                         </Command>
@@ -593,15 +691,18 @@ export function NewSchedule() {
                 </div>
               </div>
             </CardContent>
+
             <CardFooter>
               <Button
+                disabled={!exam?.id || !dateHour}
                 size="lg"
                 title="Realizar agendamento"
                 className="w-full gap-2"
-                onClick={handleCreateNewSchedule}
+                onClick={handleCreateSchedule('exame')}
               >
                 <Check />
-                Agendar exame
+                Agendar {exam?.name}
+                {exam && ` - ${exam?.formattedValue}`}
               </Button>
             </CardFooter>
           </Card>
