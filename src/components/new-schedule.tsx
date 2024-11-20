@@ -6,7 +6,7 @@ import {
   outlook,
   yahoo,
 } from 'calendar-link'
-import { format, isBefore, isToday, set } from 'date-fns'
+import { format, isBefore, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
@@ -222,8 +222,8 @@ export function NewSchedule() {
   const [date, setDate] = useState<Date>()
   const [hour, setHour] = useState<string | null>(null)
   const [schedule, setSchedule] = useState<
-    RegisterScheduleBody | RegisterExamScheduleBody | undefined
-  >(undefined)
+    RegisterScheduleBody | RegisterExamScheduleBody
+  >()
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const [pix, setPix] = useState<string>('')
@@ -419,7 +419,9 @@ export function NewSchedule() {
       </TabsList>
       <TabsContent value="consulta">
         {schedulePaid === false ? (
-          renderPix(schedule?.formattedValue, 'consulta')
+          schedule?.formattedValue ? (
+            renderPix(schedule.formattedValue, 'consulta')
+          ) : null
         ) : (
           <div className="flex-1">
             <AlertDialog open={isOpenAlertDialog}>
@@ -640,7 +642,9 @@ export function NewSchedule() {
       </TabsContent>
       <TabsContent value="exame">
         {examPaid === false ? (
-          renderPix(schedule?.formattedValue, 'exame')
+          schedule?.formattedValue ? (
+            renderPix(schedule.formattedValue, 'exame')
+          ) : null
         ) : (
           <div className="flex-1">
             <AlertDialog open={isOpenAlertDialog}>
