@@ -11,15 +11,19 @@ import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
   Check,
+  ClipboardPlus,
   Clock,
   Heart,
+  Hospital,
   Stethoscope,
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { getExams } from '@/api/get-exams'
 import { getSpecialties } from '@/api/get-specialties'
 import { getUser, type PatientProps } from '@/api/get-user'
 import { getUsers } from '@/api/get-users'
+import { registerExamSchedule } from '@/api/register-exam-schedule'
 import { registerSchedule } from '@/api/register-schedule'
 import { TimeSlots } from '@/components/times-slots'
 import {
@@ -33,6 +37,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Command,
   CommandEmpty,
@@ -48,6 +60,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToastAction } from '@/components/ui/toast'
 import { toast } from '@/components/ui/use-toast'
 import { queryClient } from '@/lib/react-query'
@@ -63,6 +76,22 @@ export interface DoctorProps {
   createdAt: Date
   updatedAt: Date
 }
+
+interface BaseScheduleBody {
+  patientId: string
+  dateHour: string
+}
+
+interface ConsultScheduleBody extends BaseScheduleBody {
+  specialistId: string
+  specialtyId: string
+}
+
+interface ExamScheduleBody extends BaseScheduleBody {
+  examId: string
+}
+
+type RegisterSchedule = ConsultScheduleBody | ExamScheduleBody
 
 const times = [
   {
@@ -113,13 +142,25 @@ export function NewSchedule() {
     staleTime: Infinity,
   })
 
-  const { data: specialties = [] as { id: string; name: string }[] } = useQuery(
-    {
-      queryKey: ['specialties'],
-      queryFn: getSpecialties,
-      staleTime: Infinity,
-    },
-  )
+  const {
+    data: specialties = [] as {
+      id: string
+      name: string
+      formattedValue: string
+    }[],
+  } = useQuery({
+    queryKey: ['specialties'],
+    queryFn: getSpecialties,
+    staleTime: Infinity,
+  })
+
+  const {
+    data: exams = [] as { id: string; name: string; formattedValue: string }[],
+  } = useQuery({
+    queryKey: ['exams'],
+    queryFn: getExams,
+    staleTime: Infinity,
+  })
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -146,15 +187,41 @@ export function NewSchedule() {
     },
   })
 
+  const { mutateAsync: registerExamScheduleFn } = useMutation({
+    mutationFn: registerExamSchedule,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['exams-schedules'] })
+
+      toast({
+        variant: 'default',
+        title: 'Agendamento',
+        description: 'Agendado realizado!',
+        action: (
+          <ToastAction altText="Fazer login">
+            Adicionar ao calendário
+          </ToastAction>
+        ),
+        onClick: () => setIsOpenAlertDialog(true),
+      })
+    },
+  })
+
   const [specialty, setSpecialty] = useState<{
     id: string
     name: string
+    formattedValue: string
+  } | null>(null)
+  const [exam, setExam] = useState<{
+    id: string
+    name: string
+    formattedValue: string
   } | null>(null)
   const [specialist, setSpecialist] = useState<DoctorProps | null>(
     user?.crm ? user : null,
   )
   const [date, setDate] = useState<Date>()
   const [hour, setHour] = useState<string | null>(null)
+  const [schedule, setSchedule] = useState<RegisterSchedule>()
   const [isOpenAlertDialog, setIsOpenAlertDialog] = useState<boolean>(false)
 
   const filteredDoctors = specialty
@@ -170,35 +237,68 @@ export function NewSchedule() {
   const dateHour =
     date && hour ? `${format(date, 'yyyy-MM-dd')}T${hour}:00` : ''
 
-  async function handleCreateNewSchedule() {
-    try {
-      if (!specialist || !date || !hour) {
-        return toast({
+  function handleCreateSchedule(type: 'consulta' | 'exame') {
+    return async () => {
+      try {
+        if (type === 'consulta' && (!specialist || !date || !hour)) {
+          return toast({
+            variant: 'destructive',
+            title: 'Agendamento',
+            description: 'Preencha todos os campos para agendar a consulta.',
+          })
+        }
+
+        if (type === 'exame' && (!exam || !date || !hour)) {
+          return toast({
+            variant: 'destructive',
+            title: 'Agendamento',
+            description: 'Preencha todos os campos para agendar o exame.',
+          })
+        }
+
+        const scheduleData =
+          type === 'consulta'
+            ? {
+                specialistId: specialist?.id ?? '',
+                specialtyId: specialty?.id ?? '',
+                patientId: user?.patient.id ?? '',
+                dateHour,
+              }
+            : {
+                examId: exam?.id ?? '',
+                patientId: user?.patient.id ?? '',
+                dateHour,
+              }
+
+        setSchedule(scheduleData)
+
+        const mutateFn =
+          type === 'consulta' ? registerScheduleFn : registerExamScheduleFn
+        await mutateFn(scheduleData)
+      } catch (error) {
+        const errorMessage = axiosErrorHandler(error)
+        toast({
           variant: 'destructive',
           title: 'Agendamento',
-          description: 'Preencha todos os campos para agendar.',
+          description: errorMessage,
         })
+      } finally {
+        setDate(undefined)
+        setHour(null)
+        if (type === 'consulta') {
+          setSpecialty(null)
+          setSpecialist(user?.crm ? user : null)
+        } else {
+          setExam(null)
+        }
       }
-
-      await registerScheduleFn({
-        specialistId: specialist?.id ?? '',
-        patientId: user?.patient.id ?? '',
-        dateHour,
-      })
-    } catch (error) {
-      const errorMessage = axiosErrorHandler(error)
-      toast({
-        variant: 'destructive',
-        title: 'Agendamento',
-        description: errorMessage,
-      })
     }
   }
 
   const event: CalendarEvent = {
     title: 'Consulta médica',
-    description: 'Agendamento de consulta médica - Saúde Online',
-    start: `${dateHour.replace('T', ' ')} +0300`,
+    description: 'Agendamento - Saúde Online',
+    start: `${schedule?.dateHour.replace('T', ' ')} +0300`,
     duration: [30, 'minutes'],
   }
 
@@ -210,203 +310,404 @@ export function NewSchedule() {
   const handleOpenCalendar = (url: string) => {
     window.open(url, '_blank')
     setIsOpenAlertDialog(false)
-
-    setDate(undefined)
-    setHour(null)
-    setSpecialist(user?.crm ? user : null)
   }
 
   return (
-    <div className="flex items-center">
-      <AlertDialog open={isOpenAlertDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Adicionar ao calendário pessoal</AlertDialogTitle>
-            <AlertDialogDescription>
-              Escolha o calendário que deseja adicionar o agendamento
-            </AlertDialogDescription>
-            <div className="flex items-center justify-center gap-2 pt-4">
-              <Button size="sm" onClick={() => handleOpenCalendar(googleUrl)}>
-                Google Calendar
-              </Button>
-              <Button size="sm" onClick={() => handleOpenCalendar(outlookUrl)}>
-                Outlook
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleOpenCalendar(office365Url)}
-              >
-                Office 365
-              </Button>
-              <Button size="sm" onClick={() => handleOpenCalendar(yahooUrl)}>
-                Yahoo Calendar
-              </Button>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <div className="flex-col justify-between rounded-lg p-10 md:flex">
-        <div className="space-y-4">
-          <div className="flex flex-row items-center gap-3">
-            <Clock className="h-6 w-6 text-primary" />
-
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Novo agendamento
-            </h1>
-          </div>
-          <p className="pb-2 text-sm text-muted-foreground">
-            Selecione um médico, data e horário para agendar uma consulta.
-          </p>
-
-          <div className="flex flex-col space-y-4">
-            <div className="flex flex-col gap-2">
-              <Label>Paciente</Label>
-              <Input disabled value={user?.name} />
-            </div>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Especialidade</Label>
+    <Tabs defaultValue="consulta" className="max-w-[800px]">
+      <TabsList>
+        <TabsTrigger value="consulta">Consulta</TabsTrigger>
+        <TabsTrigger value="exame">Exame</TabsTrigger>
+      </TabsList>
+      <TabsContent value="consulta">
+        <div className="flex-1">
+          <AlertDialog open={isOpenAlertDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Adicionar ao calendário pessoal
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Escolha o calendário que deseja adicionar o agendamento
+                </AlertDialogDescription>
+                <div className="flex items-center justify-center gap-2 pt-4">
                   <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
+                    size="sm"
+                    onClick={() => handleOpenCalendar(googleUrl)}
                   >
-                    <Heart className="mr-4 h-4 w-4 text-primary" />
-                    {specialty ? (
-                      specialty.name
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione a especialidade
-                      </span>
-                    )}
+                    Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(outlookUrl)}
+                  >
+                    Outlook
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(office365Url)}
+                  >
+                    Office 365
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(yahooUrl)}
+                  >
+                    Yahoo Calendar
                   </Button>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Command>
-                  <CommandInput placeholder="Pesquise especialidades..." />
-                  <CommandList>
-                    <CommandEmpty>
-                      Nenhuma especialidade encontrada
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {Array.isArray(specialties) &&
-                        specialties.map((spec) => (
-                          <CommandItem
-                            key={spec.id}
-                            onSelect={() => setSpecialty(spec)}
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-row gap-3">
+                <Clock className="h-6 w-6 text-primary" />
+                Agendamento de consulta
+              </CardTitle>
+              <CardDescription>
+                Selecione um médico, data e horário para agendar uma consulta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex-col justify-between rounded-lg md:flex">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Paciente</Label>
+                      <Input disabled value={user?.name} />
+                    </div>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Especialidade</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
                           >
-                            {spec.name}
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+                            <Heart className="mr-4 h-4 w-4 text-primary" />
+                            {specialty ? (
+                              specialty.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a especialidade
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise especialidades..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              Nenhuma especialidade encontrada
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {Array.isArray(specialties) &&
+                                specialties.map((spec) => (
+                                  <CommandItem
+                                    key={spec.id}
+                                    className="flex-row items-center justify-between gap-10"
+                                    onSelect={() => setSpecialty(spec)}
+                                  >
+                                    <p>{spec.name}</p>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Médico</Label>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <Stethoscope className="mr-4 h-4 w-4 text-primary" />
-                    {specialist ? (
-                      specialist.name
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione o médico
-                      </span>
-                    )}
-                  </Button>
+                                    <p className="font-semibold">
+                                      {spec.formattedValue}
+                                    </p>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Médico</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Stethoscope className="mr-4 h-4 w-4 text-primary" />
+                            {specialist ? (
+                              specialist.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione o médico
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise médicos..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              Nenhum médico encontrado
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {filteredDoctors?.map((doc) => (
+                                <CommandItem
+                                  key={doc.id}
+                                  onSelect={() => setSpecialist(doc)}
+                                >
+                                  {doc.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Data</Label>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
+                            {date ? (
+                              format(date, 'PPP', { locale: ptBR })
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a data
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          modifiers={{
+                            disabled: (date) =>
+                              !isToday(date) && isBefore(date, new Date()),
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex flex-col gap-2 pb-4">
+                      <Label className="text-lg">Horários</Label>
+
+                      <TimeSlots
+                        label="Selecione o horário da consulta"
+                        date={date ? format(date, 'yyyy-MM-dd') : ''}
+                        times={times}
+                        onSelect={setHour}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Command>
-                  <CommandInput placeholder="Pesquise médicos..." />
-                  <CommandList>
-                    <CommandEmpty>Nenhum médico encontrado</CommandEmpty>
-                    <CommandGroup>
-                      {filteredDoctors?.map((doc) => (
-                        <CommandItem
-                          key={doc.id}
-                          onSelect={() => setSpecialist(doc)}
-                        >
-                          {doc.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+              </div>
+            </CardContent>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="flex flex-col gap-2">
-                  <Label>Data</Label>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
-                    {date ? (
-                      format(date, 'PPP', { locale: ptBR })
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Selecione a data
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                  modifiers={{
-                    disabled: (date) =>
-                      !isToday(date) && isBefore(date, new Date()),
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-
-            <div className="flex flex-col gap-2 pb-4">
-              <Label className="text-lg">Horários</Label>
-
-              <TimeSlots
-                label="Selecione o horário da consulta"
-                date={date ? format(date, 'yyyy-MM-dd') : ''}
-                times={times}
-                onSelect={setHour}
-              />
-            </div>
-
-            <Button
-              size="lg"
-              title="Realizar agendamento"
-              className="w-full gap-2"
-              onClick={handleCreateNewSchedule}
-            >
-              <Check />
-              Agendar
-            </Button>
-          </div>
+            <CardFooter>
+              <Button
+                disabled={!specialty?.id || !specialist?.id || !dateHour}
+                size="lg"
+                title="Realizar agendamento"
+                className="w-full gap-2"
+                onClick={handleCreateSchedule('consulta')}
+              >
+                <Check />
+                Agendar consulta{' '}
+                {specialty && ` - ${specialty?.formattedValue}`}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value="exame">
+        <div className="flex-1">
+          <AlertDialog open={isOpenAlertDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Adicionar ao calendário pessoal
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Escolha o calendário que deseja adicionar o agendamento
+                </AlertDialogDescription>
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(googleUrl)}
+                  >
+                    Google Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(outlookUrl)}
+                  >
+                    Outlook
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(office365Url)}
+                  >
+                    Office 365
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenCalendar(yahooUrl)}
+                  >
+                    Yahoo Calendar
+                  </Button>
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-row gap-3">
+                <ClipboardPlus className="h-6 w-6 text-primary" />
+                Agendamento de exame
+              </CardTitle>
+              <CardDescription>
+                Selecione o exame, data e horário para agendar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex-col justify-between rounded-lg md:flex">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Label>Paciente</Label>
+                      <Input disabled value={user?.name} />
+                    </div>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Exame</Label>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Hospital className="mr-4 h-4 w-4 text-primary" />
+                            {exam ? (
+                              exam.name
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione o exame
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Command>
+                          <CommandInput placeholder="Pesquise exames..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum exame encontrado</CommandEmpty>
+                            <CommandGroup>
+                              {Array.isArray(exams) &&
+                                exams.map((exam) => (
+                                  <CommandItem
+                                    key={exam.id}
+                                    className="flex-row items-center justify-between gap-10"
+                                    onSelect={() => setExam(exam)}
+                                  >
+                                    <p>{exam.name}</p>
+
+                                    <p className="font-semibold">
+                                      {exam.formattedValue}
+                                    </p>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex flex-col gap-2">
+                          <Label>Data</Label>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-4 h-4 w-4 text-primary" />
+                            {date ? (
+                              format(date, 'PPP', { locale: ptBR })
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Selecione a data
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          modifiers={{
+                            disabled: (date) =>
+                              !isToday(date) && isBefore(date, new Date()),
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex flex-col gap-2 pb-4">
+                      <Label className="text-lg">Horários</Label>
+
+                      <TimeSlots
+                        label="Selecione o horário da consulta"
+                        date={date ? format(date, 'yyyy-MM-dd') : ''}
+                        times={times}
+                        onSelect={setHour}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter>
+              <Button
+                disabled={!exam?.id || !dateHour}
+                size="lg"
+                title="Realizar agendamento"
+                className="w-full gap-2"
+                onClick={handleCreateSchedule('exame')}
+              >
+                <Check />
+                Agendar {exam?.name}
+                {exam && ` - ${exam?.formattedValue}`}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }

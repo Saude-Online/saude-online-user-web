@@ -1,33 +1,41 @@
-import { isAxiosError } from 'axios'
+import { useQuery } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
+import { getUser } from '@/api/get-user'
 import { Header } from '@/components/header'
-import { api } from '@/lib/axios'
 
 export function AppLayout() {
   const navigate = useNavigate()
 
+  const {
+    data: user,
+    isError,
+    isLoading,
+  } = useQuery({
+    queryKey: ['user'],
+    queryFn: getUser,
+    retry: false,
+  })
+
   useEffect(() => {
-    const interceptorId = api.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (isAxiosError(error)) {
-          const status = error.response?.status
+    if (isError) {
+      navigate('/sign-in', { replace: true })
+    }
+  }, [isError, navigate])
 
-          if (status === 401) {
-            navigate('/sign-in', { replace: true })
-          } else {
-            throw error
-          }
-        } else {
-          console.error('Erro não reconhecido pelo Axios:', error)
-        }
-      },
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin" />
+      </div>
     )
+  }
 
-    return () => api.interceptors.response.eject(interceptorId)
-  }, [navigate])
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="flex min-h-screen flex-col antialiased">

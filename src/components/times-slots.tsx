@@ -38,14 +38,11 @@ export function TimeSlots({ label, date, times, onSelect }: TimeSlotProps) {
       return true // Desabilita se for retroativo
     }
 
-    return (
-      Array.isArray(schedule) &&
-      schedule.some((booked: { dateHour: string }) => {
-        // Converte o `dateHour` para um objeto Date e compara com `selectedDateTime`
-        const bookedDateTime = parseISO(booked.dateHour)
-        return isEqual(bookedDateTime, selectedDateTime)
-      })
-    )
+    return schedule.some((booked: { dateHour: string }) => {
+      const bookedDateTime = parseISO(booked.dateHour) // Converte o horário do agendamento para um objeto Date
+
+      return isEqual(bookedDateTime, selectedDateTime) // Compara se o horário do agendamento é igual ao horário selecionado
+    })
   }
 
   return (

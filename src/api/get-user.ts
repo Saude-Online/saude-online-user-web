@@ -1,3 +1,4 @@
+import type { GetScheduleResponse } from '@/api/get-schedule'
 import { api } from '@/lib/axios'
 
 export type PatientProps = {
@@ -18,6 +19,7 @@ export interface GetUserResponse {
     crm: string
     role: string
     patient: PatientProps
+    schedules: GetScheduleResponse
     createdAt: Date
     updatedAt: Date
   }

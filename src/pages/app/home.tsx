@@ -1,4 +1,4 @@
-import { BadgeDollarSign, CalendarHeart } from 'lucide-react'
+import { CalendarHeart, History } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 
 import { FeatureCard } from '@/components/feature-card'
@@ -20,10 +20,10 @@ export function Home() {
             to="schedule"
           />
           <FeatureCard
-            icon={BadgeDollarSign}
-            title="Financeiro"
+            icon={History}
+            title="Histórico"
             description="Monitore suas finanças, controle suas receitas e despesas em um só lugar."
-            to="financial"
+            to="historic"
           />
         </div>
       </div>

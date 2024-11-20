@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/pages/_layouts/app'
 import { AuthLayout } from '@/pages/_layouts/auth'
 import { NotFound } from '@/pages/404'
-import { Financial } from '@/pages/app/financial'
+import { Historic } from '@/pages/app/historic'
 import { Home } from '@/pages/app/home'
 import { Schedules } from '@/pages/app/schedules'
 import { SignIn } from '@/pages/auth/sign-in'
@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
     errorElement: <Error />,
     children: [
       { path: '/', element: <Home /> },
-      { path: '/financial', element: <Financial /> },
+      { path: '/historic', element: <Historic /> },
       { path: '/schedule', element: <Schedules /> },
     ],
   },

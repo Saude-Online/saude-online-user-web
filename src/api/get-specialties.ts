@@ -4,6 +4,7 @@ export interface GetSpecialtiesResponse {
   specialties: {
     id: string
     name: string
+    formattedValue: string
   }
 }
 
