@@ -65,6 +65,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToastAction } from '@/components/ui/toast'
 import { toast } from '@/components/ui/use-toast'
 import { queryClient } from '@/lib/react-query'
+import { cn } from '@/lib/utils'
 import { axiosErrorHandler } from '@/utils/axiosErrorHandler'
 
 export interface DoctorProps {
@@ -205,6 +206,12 @@ export function NewSchedule() {
       })
     },
   })
+
+  const [openPopover, setOpenPopover] = useState<string | null>(null)
+
+  const handleOpenChange = (id: string, isOpen: boolean) => {
+    setOpenPopover(isOpen ? id : null)
+  }
 
   const [specialty, setSpecialty] = useState<{
     id: string
@@ -486,7 +493,12 @@ export function NewSchedule() {
                         <Input disabled value={user?.name} />
                       </div>
 
-                      <Popover>
+                      <Popover
+                        open={openPopover === 'specialty'}
+                        onOpenChange={(isOpen) =>
+                          handleOpenChange('specialty', isOpen)
+                        }
+                      >
                         <PopoverTrigger asChild>
                           <div className="flex flex-col gap-2">
                             <Label>Especialidade</Label>
@@ -518,14 +530,25 @@ export function NewSchedule() {
                                   specialties.map((spec) => (
                                     <CommandItem
                                       key={spec.id}
-                                      className="flex-row items-center justify-between gap-10"
-                                      onSelect={() => setSpecialty(spec)}
+                                      onSelect={() => {
+                                        setSpecialty(spec)
+                                        setOpenPopover(null)
+                                      }}
                                     >
-                                      <p>{spec.name}</p>
-
-                                      <p className="font-semibold">
-                                        {spec.formattedValue}
-                                      </p>
+                                      <div className="flex w-full items-center">
+                                        <Check
+                                          className={cn(
+                                            'mr-2 h-4 w-4',
+                                            spec.name === specialty?.name
+                                              ? 'opacity-100'
+                                              : 'opacity-0',
+                                          )}
+                                        />
+                                        <p className="flex-grow">{spec.name}</p>
+                                        <p className="ml-auto pl-10 font-semibold">
+                                          {spec.formattedValue}
+                                        </p>
+                                      </div>
                                     </CommandItem>
                                   ))}
                               </CommandGroup>
@@ -534,7 +557,12 @@ export function NewSchedule() {
                         </PopoverContent>
                       </Popover>
 
-                      <Popover>
+                      <Popover
+                        open={openPopover === 'specialist'}
+                        onOpenChange={(isOpen) =>
+                          handleOpenChange('specialist', isOpen)
+                        }
+                      >
                         <PopoverTrigger asChild>
                           <div className="flex flex-col gap-2">
                             <Label>Médico</Label>
@@ -565,8 +593,19 @@ export function NewSchedule() {
                                 {filteredDoctors?.map((doc) => (
                                   <CommandItem
                                     key={doc.id}
-                                    onSelect={() => setSpecialist(doc)}
+                                    onSelect={() => {
+                                      setSpecialist(doc)
+                                      setOpenPopover(null)
+                                    }}
                                   >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        doc.name === specialist?.name
+                                          ? 'opacity-100'
+                                          : 'opacity-0',
+                                      )}
+                                    />
                                     {doc.name}
                                   </CommandItem>
                                 ))}
@@ -576,7 +615,12 @@ export function NewSchedule() {
                         </PopoverContent>
                       </Popover>
 
-                      <Popover>
+                      <Popover
+                        open={openPopover === 'date'}
+                        onOpenChange={(isOpen) =>
+                          handleOpenChange('date', isOpen)
+                        }
+                      >
                         <PopoverTrigger asChild>
                           <div className="flex flex-col gap-2">
                             <Label>Data</Label>
@@ -600,7 +644,10 @@ export function NewSchedule() {
                           <Calendar
                             mode="single"
                             selected={date}
-                            onSelect={setDate}
+                            onSelect={(date) => {
+                              setDate(date)
+                              setOpenPopover(null)
+                            }}
                             initialFocus
                             modifiers={{
                               disabled: (date) =>
@@ -709,7 +756,12 @@ export function NewSchedule() {
                         <Input disabled value={user?.name} />
                       </div>
 
-                      <Popover>
+                      <Popover
+                        open={openPopover === 'specialty'}
+                        onOpenChange={(isOpen) =>
+                          handleOpenChange('specialty', isOpen)
+                        }
+                      >
                         <PopoverTrigger asChild>
                           <div className="flex flex-col gap-2">
                             <Label>Exame</Label>
@@ -738,17 +790,26 @@ export function NewSchedule() {
                               </CommandEmpty>
                               <CommandGroup>
                                 {Array.isArray(exams) &&
-                                  exams.map((exam) => (
+                                  exams.map((e) => (
                                     <CommandItem
-                                      key={exam.id}
+                                      key={e.id}
                                       className="flex-row items-center justify-between gap-10"
-                                      onSelect={() => setExam(exam)}
+                                      onSelect={() => setExam(e)}
                                     >
-                                      <p>{exam.name}</p>
-
-                                      <p className="font-semibold">
-                                        {exam.formattedValue}
-                                      </p>
+                                      <div className="flex w-full items-center">
+                                        <Check
+                                          className={cn(
+                                            'mr-2 h-4 w-4',
+                                            e.name === exam?.name
+                                              ? 'opacity-100'
+                                              : 'opacity-0',
+                                          )}
+                                        />
+                                        <p className="flex-grow">{e.name}</p>
+                                        <p className="ml-auto pl-10 font-semibold">
+                                          {e.formattedValue}
+                                        </p>
+                                      </div>
                                     </CommandItem>
                                   ))}
                               </CommandGroup>
