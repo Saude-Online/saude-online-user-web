@@ -306,6 +306,8 @@ export function NewSchedule() {
           setExamPaid(false)
 
           await registerExamScheduleFn(scheduleData as RegisterExamScheduleBody)
+
+          queryClient.invalidateQueries({ queryKey: ['historic'] })
         }
       } catch (error) {
         const errorMessage = axiosErrorHandler(error)
