@@ -6,7 +6,7 @@ import {
   outlook,
   yahoo,
 } from 'calendar-link'
-import { format, isBefore, isToday } from 'date-fns'
+import { format, formatISO, isBefore, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
@@ -339,7 +339,7 @@ export function NewSchedule() {
   const event: CalendarEvent = {
     title: 'Consulta médica',
     description: 'Agendamento - Saúde Online',
-    start: `${schedule?.dateHour.replace('T', ' ')} +0300`,
+    start: schedule?.dateHour ? formatISO(new Date(schedule.dateHour)) : '',
     duration: [30, 'minutes'],
   }
 
