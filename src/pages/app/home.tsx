@@ -22,7 +22,7 @@ export function Home() {
           <FeatureCard
             icon={History}
             title="Histórico"
-            description="Monitore suas finanças, controle suas receitas e despesas em um só lugar."
+            description="Confira seu histórico de consultas, exames e anamneses."
             to="historic"
           />
         </div>

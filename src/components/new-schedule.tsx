@@ -408,7 +408,7 @@ export function NewSchedule() {
               size="sm"
               variant="ghost"
             >
-              Marcar como pago
+              Menu
             </Button>
           </div>
         </div>
@@ -470,7 +470,11 @@ export function NewSchedule() {
                   </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel
+                    onClick={() => setIsOpenAlertDialog(false)}
+                  >
+                    Cancelar
+                  </AlertDialogCancel>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
