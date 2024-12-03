@@ -7,6 +7,8 @@ export type PatientProps = {
   id: string
   name: string
   age: number
+  weight: string
+  height: string
   document: string
   phone: string
   schedules?: GetScheduleResponse

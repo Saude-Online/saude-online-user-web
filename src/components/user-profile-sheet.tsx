@@ -24,6 +24,12 @@ const userProfileSchema = z
   .object({
     name: z.string().min(3, { message: 'Digite o nome completo.' }),
     username: z.string(),
+    age: z.preprocess(
+      (val) => (val === '' ? null : val),
+      z.coerce.number().int().positive().nullable(),
+    ),
+    weight: z.string().optional(),
+    height: z.string().optional(),
     oldPassword: z.string().optional(),
     newPassword: z.string().optional(),
   })
@@ -69,6 +75,9 @@ export function UserProfileSheet() {
     values: {
       name: user?.name ?? '',
       username: user?.username ?? '',
+      age: user?.patient.age ?? null,
+      weight: user?.patient.weight ?? '',
+      height: user?.patient.height ?? '',
     },
   })
 
@@ -81,6 +90,9 @@ export function UserProfileSheet() {
       await updateProfileFn({
         id: user?.id?.toString() ?? '',
         name: data.name,
+        age: data.age,
+        weight: data.weight,
+        height: data.height,
         oldPassword: data.oldPassword,
         newPassword: data.newPassword,
       })
@@ -115,6 +127,9 @@ export function UserProfileSheet() {
             <Label htmlFor="name">Nome completo</Label>
             <Input className="mt-1" id="name" {...register('name')} />
           </div>
+          {errors.name && (
+            <p className="text-sm text-red-500">{errors.name.message}</p>
+          )}
 
           <div>
             <Label htmlFor="username">Username</Label>
@@ -125,6 +140,49 @@ export function UserProfileSheet() {
               {...register('username')}
             />
           </div>
+          {errors.username && (
+            <p className="text-sm text-red-500">{errors.username.message}</p>
+          )}
+
+          <div>
+            <Label htmlFor="age">Idade</Label>
+            <Input
+              className="mt-1"
+              id="age"
+              placeholder="Sua idade"
+              type="number"
+              {...register('age')}
+            />
+          </div>
+          {errors.age && (
+            <p className="text-sm text-red-500">{errors.age.message}</p>
+          )}
+
+          <div>
+            <Label htmlFor="weight">Peso</Label>
+            <Input
+              className="mt-1"
+              id="weight"
+              placeholder="Ex: 70,2"
+              {...register('weight')}
+            />
+          </div>
+          {errors.weight && (
+            <p className="text-sm text-red-500">{errors.weight.message}</p>
+          )}
+
+          <div>
+            <Label htmlFor="height">Altura</Label>
+            <Input
+              className="mt-1"
+              id="height"
+              placeholder="Ex: 1,70"
+              {...register('height')}
+            />
+          </div>
+          {errors.height && (
+            <p className="text-sm text-red-500">{errors.height.message}</p>
+          )}
 
           <div>
             <Label htmlFor="oldPassword">Senha antiga</Label>
