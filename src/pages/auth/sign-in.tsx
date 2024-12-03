@@ -40,10 +40,20 @@ export function SignIn() {
 
   async function handleSignIn(user: SignInForm) {
     try {
-      await authenticate({
+      const authenticatedUser = await authenticate({
         username: user.username,
         password: user.password,
       })
+
+      if (authenticatedUser.role === 'ADMIN') {
+        toast({
+          variant: 'destructive',
+          title: 'Acesso restrito',
+          description:
+            'Seu usuário é um administrador e não pode acessar o painel do usuário.',
+        })
+        return
+      }
 
       queryClient.invalidateQueries({ queryKey: ['user'] })
 

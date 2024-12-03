@@ -5,6 +5,19 @@ export interface SignInBody {
   password: string
 }
 
-export async function signIn({ username, password }: SignInBody) {
-  await api.post('/sessions', { username, password })
+interface SignInResponse {
+  token: string
+  role: 'USER' | 'ADMIN'
+}
+
+export async function signIn({
+  username,
+  password,
+}: SignInBody): Promise<SignInResponse> {
+  const response = await api.post('/sessions', { username, password })
+
+  return {
+    token: response.data.token,
+    role: response.data.role,
+  }
 }
