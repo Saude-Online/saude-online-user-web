@@ -11,7 +11,7 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table'
 import { format } from 'date-fns'
-import { ChevronLeft, ChevronRight, HistoryIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPlus, Clock } from 'lucide-react'
 import { useState } from 'react'
 
 import type { HistoricProps } from '@/api/get-user'
@@ -132,7 +132,12 @@ export function HistoricTable({ schedules, examSchedule }: HistoricTableProps) {
     <div className="space-y-4">
       <div className="flex flex-row items-center justify-between">
         <div className="flex flex-row items-center gap-3">
-          <HistoryIcon className="h-6 w-6 text-primary" />
+          {Array.isArray(schedules) ? (
+            <Clock className="h-6 w-6 text-primary" />
+          ) : (
+            <ClipboardPlus className="h-6 w-6 text-primary" />
+          )}
+
           <h1 className="text-2xl font-semibold tracking-tight">
             Histórico de {Array.isArray(schedules) ? 'consultas' : 'exames'}
           </h1>

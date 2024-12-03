@@ -1,3 +1,4 @@
+import type { GetAnamneseResponse } from '@/api/get-anamnese'
 import type { GetExamScheduleResponse } from '@/api/get-exam-schedule'
 import type { GetScheduleResponse } from '@/api/get-schedule'
 import { api } from '@/lib/axios'
@@ -10,6 +11,7 @@ export type PatientProps = {
   phone: string
   schedules?: GetScheduleResponse
   examSchedule?: GetExamScheduleResponse
+  anamneses?: GetAnamneseResponse
   createdAt: Date
   updatedAt: Date
 }
@@ -17,6 +19,7 @@ export type PatientProps = {
 export type HistoricProps = {
   schedules?: GetScheduleResponse
   examSchedule?: GetExamScheduleResponse
+  anamneses?: GetAnamneseResponse
 }
 
 export interface GetUserResponse {
@@ -29,6 +32,7 @@ export interface GetUserResponse {
     patient: PatientProps
     schedules: GetScheduleResponse
     examSchedule: GetExamScheduleResponse
+    anamneses: GetAnamneseResponse
     createdAt: Date
     updatedAt: Date
   }
