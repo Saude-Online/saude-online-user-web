@@ -3,6 +3,9 @@ import { api } from '@/lib/axios'
 interface UpdateProfileBody {
   id: string
   name: string
+  age?: number | null
+  weight?: string
+  height?: string
   oldPassword?: string
   newPassword?: string
 }
@@ -10,10 +13,18 @@ interface UpdateProfileBody {
 export async function updateProfile({
   id,
   name,
+  age,
+  weight,
+  height,
   oldPassword,
   newPassword,
 }: UpdateProfileBody) {
-  const data: Record<string, string | undefined> = { name }
+  const data: { [key: string]: string | number | null | undefined } = {
+    name,
+    age,
+    weight,
+    height,
+  }
 
   if (oldPassword) {
     data.oldPassword = oldPassword
