@@ -6,6 +6,7 @@ import { api } from '@/lib/axios'
 export type PatientProps = {
   id: string
   name: string
+  avatar: string
   age: number
   weight: string
   height: string
@@ -28,6 +29,7 @@ export interface GetUserResponse {
   user: {
     id: string
     name: string
+    avatar: string
     username: string
     crm: string
     role: string
