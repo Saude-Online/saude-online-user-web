@@ -1,4 +1,4 @@
-import { CalendarHeart, History } from 'lucide-react'
+import { CalendarHeart, ClipboardPlus, Clock, Cross } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 
 import { FeatureCard } from '@/components/feature-card'
@@ -20,10 +20,22 @@ export function Home() {
             to="schedule"
           />
           <FeatureCard
-            icon={History}
-            title="Histórico"
-            description="Confira seu histórico de consultas, exames e anamneses."
-            to="historic"
+            icon={Clock}
+            title="Minhas consultas"
+            description="Confira seu histórico de consultas."
+            to="historic-schedule"
+          />
+          <FeatureCard
+            icon={ClipboardPlus}
+            title="Meus exames"
+            description="Confira seu histórico de exames."
+            to="historic-exam-schedule"
+          />
+          <FeatureCard
+            icon={Cross}
+            title="Retornos médicos"
+            description="Confira seu histórico de retornos médicos."
+            to="medical-returns"
           />
         </div>
       </div>

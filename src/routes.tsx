@@ -3,7 +3,9 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/pages/_layouts/app'
 import { AuthLayout } from '@/pages/_layouts/auth'
 import { NotFound } from '@/pages/404'
-import { Historic } from '@/pages/app/historic'
+import { HistoricAnamnesis } from '@/pages/app/historic-anamnesis'
+import { HistoricExamSchedule } from '@/pages/app/historic-exam-schedule'
+import { HistoricSchedule } from '@/pages/app/historic-schedule'
 import { Home } from '@/pages/app/home'
 import { Schedules } from '@/pages/app/schedules'
 import { SignIn } from '@/pages/auth/sign-in'
@@ -17,7 +19,9 @@ export const router = createBrowserRouter([
     errorElement: <Error />,
     children: [
       { path: '/', element: <Home /> },
-      { path: '/historic', element: <Historic /> },
+      { path: '/historic-schedule', element: <HistoricSchedule /> },
+      { path: '/historic-exam-schedule', element: <HistoricExamSchedule /> },
+      { path: '/medical-returns', element: <HistoricAnamnesis /> },
       { path: '/schedule', element: <Schedules /> },
     ],
   },

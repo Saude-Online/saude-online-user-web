@@ -143,9 +143,6 @@ export function HistoricTable({ schedules, examSchedule }: HistoricTableProps) {
           </h1>
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Consulte seu histórico de consultas, exames e anamnese
-      </p>
 
       <div>
         <div className="w-full">
