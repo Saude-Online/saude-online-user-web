@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { getUser } from '@/api/get-user'
 import { updateProfile } from '@/api/update-profile'
+import { uploadImageToImgBB } from '@/api/upload-avatar'
 import SelectAvatar from '@/components/select-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useToast } from '@/components/ui/use-toast'
+import { queryClient } from '@/lib/react-query'
 import { axiosErrorHandler } from '@/utils/axiosErrorHandler'
 
 const userProfileSchema = z
@@ -32,6 +34,10 @@ const userProfileSchema = z
     ),
     weight: z.string().optional(),
     height: z.string().optional(),
+    avatar: z.preprocess(
+      (val) => (val === '' ? undefined : val), // Se a foto for removida, envia null
+      z.string().optional(),
+    ),
     oldPassword: z.string().optional(),
     newPassword: z.string().optional(),
   })
@@ -82,18 +88,30 @@ export function UserProfileSheet() {
       age: user?.patient.age ?? null,
       weight: user?.patient.weight ?? '',
       height: user?.patient.height ?? '',
+      avatar: user?.patient.avatar ?? '',
     },
   })
 
   const { mutateAsync: updateProfileFn } = useMutation({
     mutationFn: updateProfile,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['user'] })
+    },
   })
-  console.log(selectedFile)
+
   async function handleUpdateProfile(data: UserProfileSchema) {
     try {
+      let avatarUrl: string | undefined
+
+      if (selectedFile) {
+        avatarUrl = await uploadImageToImgBB(selectedFile)
+      } else if (!selectedFile && user?.patient.avatar) {
+        avatarUrl = ''
+      }
+
       await updateProfileFn({
         id: user?.id?.toString() ?? '',
-        // avatar: selectedFile,
+        avatar: avatarUrl,
         name: data.name,
         age: data.age,
         weight: data.weight,
@@ -127,7 +145,10 @@ export function UserProfileSheet() {
       </SheetHeader>
 
       <div className="items-center py-4">
-        <SelectAvatar onImageSelect={setSelectedFile} />
+        <SelectAvatar
+          avatarUrl={user?.patient.avatar}
+          onImageSelect={setSelectedFile}
+        />
       </div>
       <form onSubmit={handleSubmit(handleUpdateProfile)}>
         <div className="items-center space-y-2">

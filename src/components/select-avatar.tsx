@@ -1,17 +1,27 @@
 import { Camera, Trash2 } from 'lucide-react'
 import type React from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
 interface SelectAvatarProps {
   onImageSelect?: (file: File | null) => void
+  avatarUrl?: string | null
 }
 
-const SelectAvatar: React.FC<SelectAvatarProps> = ({ onImageSelect }) => {
+const SelectAvatar: React.FC<SelectAvatarProps> = ({
+  onImageSelect,
+  avatarUrl,
+}) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (avatarUrl) {
+      setSelectedImage(avatarUrl)
+    }
+  }, [avatarUrl])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -37,7 +47,7 @@ const SelectAvatar: React.FC<SelectAvatarProps> = ({ onImageSelect }) => {
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      <Avatar className="h-24 w-24">
+      <Avatar className="h-28 w-28">
         <AvatarImage
           src={selectedImage || undefined}
           alt="User profile"
@@ -54,7 +64,7 @@ const SelectAvatar: React.FC<SelectAvatarProps> = ({ onImageSelect }) => {
           size="sm"
           className="relative overflow-hidden"
         >
-          Selecionar Foto
+          Selecionar foto
           <input
             ref={fileInputRef}
             type="file"
