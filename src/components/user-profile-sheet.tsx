@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { getUser } from '@/api/get-user'
 import { updateProfile } from '@/api/update-profile'
+import SelectAvatar from '@/components/select-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,6 +61,8 @@ type UserProfileSchema = z.infer<typeof userProfileSchema>
 export function UserProfileSheet() {
   const { toast } = useToast()
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
   const { data: user } = useQuery({
     queryKey: ['user'],
     queryFn: getUser,
@@ -84,11 +88,12 @@ export function UserProfileSheet() {
   const { mutateAsync: updateProfileFn } = useMutation({
     mutationFn: updateProfile,
   })
-
+  console.log(selectedFile)
   async function handleUpdateProfile(data: UserProfileSchema) {
     try {
       await updateProfileFn({
         id: user?.id?.toString() ?? '',
+        // avatar: selectedFile,
         name: data.name,
         age: data.age,
         weight: data.weight,
@@ -121,8 +126,11 @@ export function UserProfileSheet() {
         </SheetDescription>
       </SheetHeader>
 
+      <div className="items-center py-4">
+        <SelectAvatar onImageSelect={setSelectedFile} />
+      </div>
       <form onSubmit={handleSubmit(handleUpdateProfile)}>
-        <div className="items-center space-y-2 pt-8">
+        <div className="items-center space-y-2">
           <div>
             <Label htmlFor="name">Nome completo</Label>
             <Input className="mt-1" id="name" {...register('name')} />
